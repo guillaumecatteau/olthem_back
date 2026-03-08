@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  editor
+  member
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+enum PublicationStatus {
+  draft
+  published
+}
+
+model Utilisateur {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  displayName  String
+  passwordHash String     @map("password_hash")
+  role         UserRole   @default(member)
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  ateliersCreated Atelier[] @relation("AtelierCreatedBy")
+  postsCreated    Post[]    @relation("PostAuthor")
+
+  @@map("utilisateurs")
+}
+
+model Atelier {
+  id                Int               @id @default(autoincrement())
+  slug              String            @unique
+  title             String
+  description       String            @default("")
+  place             String            @default("")
+  capacity          Int?
+  startDate         DateTime          @map("start_date")
+  endDate           DateTime?         @map("end_date")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  createdById       Int               @map("created_by")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  createdBy Utilisateur @relation("AtelierCreatedBy", fields: [createdById], references: [id])
+
+  @@map("ateliers")
+}
+
+model Post {
+  id                Int               @id @default(autoincrement())
+  slug              String            @unique
+  title             String
+  excerpt           String            @default("")
+  content           String            @default("")
+  coverImage        String?           @map("cover_image")
+  publicationStatus PublicationStatus @default(draft) @map("publication_status")
+  publishedAt       DateTime?         @map("published_at")
+  authorId          Int               @map("author_id")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  author Utilisateur @relation("PostAuthor", fields: [authorId], references: [id])
+
+  @@map("post")
+}

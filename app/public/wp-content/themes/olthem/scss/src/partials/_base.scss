@@ -1,0 +1,40 @@
+@use 'variables' as *;
+
+:root {
+    --bg: #{$bg};
+    --ink: #{$ink};
+    --soft-ink: #{$soft-ink};
+    --brand: #{$brand};
+    --brand-dark: #{$brand-dark};
+    --line: #{$line};
+    --panel: #{$panel};
+    --admin: #{$admin};
+    --danger: #{$danger};
+    --max: #{$max};
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at 10% 0%, #fff, var(--bg));
+    color: var(--ink);
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+.olthem-app {
+    min-height: 100vh;
+}
+
+.olthem-noscript {
+    max-width: 48rem;
+    margin: 5rem auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    padding: 1rem;
+}
