@@ -1,0 +1,23 @@
+# Ignore everything
+/*
+
+# Autoriser uniquement les fichiers custom WP
+!.gitignore
+!README.md
+!app/
+app/*
+!app/public/
+app/public/*
+!app/public/wp-content/
+app/public/wp-content/*
+!app/public/wp-content/index.php
+!app/public/wp-content/mu-plugins/
+app/public/wp-content/mu-plugins/*
+!app/public/wp-content/mu-plugins/olthem-headless.php
+!app/public/wp-content/themes/
+app/public/wp-content/themes/*
+!app/public/wp-content/themes/index.php
+!app/public/wp-content/themes/olthem-headless/
+!app/public/wp-content/plugins/
+app/public/wp-content/plugins/*
+!app/public/wp-content/plugins/index.php
