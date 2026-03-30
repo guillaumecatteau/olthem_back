@@ -1,23 +1,27 @@
 # Ignore everything
 /*
 
-# Autoriser uniquement les fichiers custom WP
+# Keep repository metadata/docs
 !.gitignore
 !README.md
+
+# Allow app tree but keep explicit control
 !app/
 app/*
 !app/public/
 app/public/*
+
+# Track full WordPress content to keep machines in sync
 !app/public/wp-content/
-app/public/wp-content/*
-!app/public/wp-content/index.php
-!app/public/wp-content/mu-plugins/
-app/public/wp-content/mu-plugins/*
-!app/public/wp-content/mu-plugins/olthem-headless.php
-!app/public/wp-content/themes/
-app/public/wp-content/themes/*
-!app/public/wp-content/themes/index.php
-!app/public/wp-content/themes/olthem-headless/
-!app/public/wp-content/plugins/
-app/public/wp-content/plugins/*
-!app/public/wp-content/plugins/index.php
+!app/public/wp-content/**
+
+# Ignore transient cache artifacts
+app/public/wp-content/cache/
+app/public/wp-content/cache/**
+app/public/wp-content/uploads/cache/
+app/public/wp-content/uploads/cache/**
+
+# Track database dump used for local environment sync
+!app/sql/
+app/sql/*
+!app/sql/local.sql
