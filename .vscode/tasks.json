@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "WP Sync Push (auto)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/wp-sync.ps1",
+        "-Mode",
+        "push"
+      ],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "WP Sync Pull (auto)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/wp-sync.ps1",
+        "-Mode",
+        "pull"
+      ],
+      "group": "none",
+      "problemMatcher": []
+    }
+  ]
+}

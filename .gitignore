@@ -4,6 +4,10 @@
 # Keep repository metadata/docs
 !.gitignore
 !README.md
+!.vscode/
+!.vscode/tasks.json
+!scripts/
+!scripts/wp-sync.ps1
 
 # Allow app tree but keep explicit control
 !app/
