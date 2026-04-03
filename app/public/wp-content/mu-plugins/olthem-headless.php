@@ -70,16 +70,16 @@ add_action( 'acf/init', function () {
             ),
 
             array(
-                'key'           => 'field_olthem_thm_episode',
-                'label'         => 'Episode',
-                'name'          => 'episode',
-                'type'          => 'true_false',
-                'required'      => 0,
-                'instructions'  => 'Activer si la thématique est liée à un épisode avec un personnage.',
-                'default_value' => 0,
-                'ui'            => 1,
-                'ui_on_text'    => 'Oui',
-                'ui_off_text'   => 'Non',
+                'key'              => 'field_olthem_thm_episode',
+                'label'            => 'Episode',
+                'name'             => 'episode',
+                'type'             => 'true_false',
+                'required'         => 0,
+                'instructions'     => 'Activer si la thématique est liée à un épisode avec un personnage.',
+                'default_value'    => 0,
+                'ui'               => 1,
+                'ui_on_text'       => 'Oui',
+                'ui_off_text'      => 'Non',
             ),
 
             array(
@@ -143,9 +143,9 @@ add_action( 'acf/init', function () {
                 'required'          => 0,
                 'instructions'      => 'Ordre d\'apparition dans le header.',
                 'choices'           => array(
-                    'premier'   => 'Premier',
-                    'deuxieme'  => 'Deuxième',
-                    'troisieme' => 'Troisième',
+                    'premier'    => 'Premier',
+                    'deuxieme'   => 'Deuxième',
+                    'troisieme'  => 'Troisième',
                 ),
                 'default_value'     => array( 'premier' ),
                 'allow_null'        => 0,
@@ -181,8 +181,20 @@ add_action( 'acf/init', function () {
                 'name'           => 'couleur',
                 'type'           => 'color_picker',
                 'required'       => 1,
-                'instructions'   => 'Couleur d\'identification utilisée pour les cartes et accents visuels.',
+                'instructions'   => 'Couleur d\'identification utilisée pour les cartes et accents visuels (fond clair).',
                 'default_value'  => '#3F3F48',
+                'enable_opacity' => 0,
+                'return_format'  => 'string',
+            ),
+
+            array(
+                'key'            => 'field_olthem_thm_couleur_sombre',
+                'label'          => 'Couleur sombre du thème',
+                'name'           => 'couleur_sombre',
+                'type'           => 'color_picker',
+                'required'       => 0,
+                'instructions'   => 'Couleur utilisée sur les fonds sombres (overlay). Si vide, la couleur principale est utilisée.',
+                'default_value'  => '',
                 'enable_opacity' => 0,
                 'return_format'  => 'string',
             ),
@@ -193,6 +205,53 @@ add_action( 'acf/init', function () {
     error_log( '[OLTHEM-DEBUG] acf_add_local_field_group appelé pour group_olthem_thematique' );
 
 }, 20 );
+
+// ─── ACF : Page d'options globale (indépendante du thème actif) ─────────────
+
+add_action( 'acf/init', function () {
+    if ( ! function_exists( 'acf_add_options_page' ) ) {
+        return;
+    }
+
+    acf_add_options_page(
+        array(
+            'page_title' => 'Informations generales',
+            'menu_title' => 'Informations generales',
+            'menu_slug'  => 'olthem-informations-generales',
+            'post_id'    => 'options',
+            'capability' => 'edit_posts',
+            'redirect'   => false,
+        )
+    );
+}, 25 );
+
+// Rebranche automatiquement les groupes "Informations générales" sur la page
+// d'options même si leur clé a changé.
+add_filter( 'acf/load_field_group', function ( $group ) {
+    if ( empty( $group['title'] ) ) {
+        return $group;
+    }
+
+    $title      = remove_accents( wp_strip_all_tags( (string) $group['title'] ) );
+    $title_norm = strtolower( trim( preg_replace( '/\s+/', ' ', $title ) ) );
+
+    if ( 'informations generales' !== $title_norm ) {
+        return $group;
+    }
+
+    $group['active']   = true;
+    $group['location'] = array(
+        array(
+            array(
+                'param'    => 'options_page',
+                'operator' => '==',
+                'value'    => 'olthem-informations-generales',
+            ),
+        ),
+    );
+
+    return $group;
+} );
 
 function olthem_register_content_types() {
     register_post_type(
@@ -404,10 +463,47 @@ add_action(
             return;
         }
 
+        // ── Endpoint personnalisé pour la page d'options ───────────────────────────────────
+        register_rest_route(
+            'wp/v2',
+            'options',
+            array(
+                'methods'             => 'GET',
+                'permission_callback' => '__return_true',
+                'callback'            => function () {
+                    if ( ! function_exists( 'get_field' ) ) {
+                        return array();
+                    }
+
+                    // Essayer d'abord avec 'option' (ACF standard)
+                    $facebook_url = get_field( 'Facebook', 'option' );
+                    $x_url = get_field( 'X', 'option' );
+                    $instagram_url = get_field( 'Instagram', 'option' );
+
+                    // Si rien, essayer avec 'options' (variante)
+                    if ( ! $facebook_url ) {
+                        $facebook_url = get_field( 'Facebook', 'options' );
+                    }
+                    if ( ! $x_url ) {
+                        $x_url = get_field( 'X', 'options' );
+                    }
+                    if ( ! $instagram_url ) {
+                        $instagram_url = get_field( 'Instagram', 'options' );
+                    }
+
+                    return array(
+                        'facebook_url'      => $facebook_url ?: '',
+                        'X_url'             => $x_url ?: '',
+                        'instagram_url'     => $instagram_url ?: '',
+                    );
+                },
+            )
+        );
+
         $acf_fields = array(
-            'titre'              => 'string',
-            'descriptif_desktop' => 'string',
-            'descriptif_mobile'  => 'string',
+            'titre'               => 'string',
+            'descriptif_desktop'  => 'string',
+            'descriptif_mobile'   => 'string',
             'episode'            => 'boolean',
             'personnage'         => 'string',
             'episode_numero'     => 'integer',
@@ -415,6 +511,7 @@ add_action(
             'header_position'    => 'string',
             'visuel'             => 'object',
             'couleur'            => 'string',
+            'couleur_sombre'     => 'string',
         );
 
         foreach ( $acf_fields as $field_name => $field_type ) {
@@ -438,37 +535,71 @@ add_action(
         // Structure : repeater Builder > flexible content subsection > layouts.
 
         register_rest_field(
-            'olthem_thematique',
+            array( 'olthem_thematique', 'olthem_section' ),
             'builder',
             array(
                 'get_callback' => function ( $post_item ) {
                     $post_id = $post_item['id'];
 
-                    // get_field() avec le bon nom (B majuscule) résout tout le repeater imbriqué
+                    // get_field() avec variantes de casse pour couvrir les installations
+                    // où le champ a été renommé en lowercase.
                     if ( function_exists( 'get_field' ) ) {
                         $value = get_field( 'Builder', $post_id );
                         if ( is_array( $value ) && ! empty( $value ) ) {
                             return $value;
                         }
+
+                        $value = get_field( 'builder', $post_id );
+                        if ( is_array( $value ) && ! empty( $value ) ) {
+                            return $value;
+                        }
                     }
 
-                    // Fallback : lecture brute des post meta (B majuscule)
+                    // Fallback : lecture brute des post meta (Builder/builder)
                     $count = (int) get_post_meta( $post_id, 'Builder', true );
+                    if ( $count <= 0 ) {
+                        $count = (int) get_post_meta( $post_id, 'builder', true );
+                    }
                     if ( $count <= 0 ) {
                         return array();
                     }
 
                     $all_meta = get_post_meta( $post_id );
                     $rows     = array();
+                    $base_key = isset( $all_meta['Builder'] ) ? 'Builder' : 'builder';
 
                     for ( $i = 0; $i < $count; $i++ ) {
-                        $row_prefix  = 'Builder_' . $i . '_';
+                        $row_prefix  = $base_key . '_' . $i . '_';
                         $sub_layouts = isset( $all_meta[ $row_prefix . 'subsection' ][0] )
                             ? maybe_unserialize( $all_meta[ $row_prefix . 'subsection' ][0] )
                             : array();
 
                         $sub_count = is_array( $sub_layouts ) ? count( $sub_layouts ) : 0;
+                        $row_data  = array();
                         $subsection = array();
+
+                        // Champs portés par la ligne repeater elle-même (ex: ImageSolo)
+                        // Ils doivent être exposés au même niveau que subsection.
+                        foreach ( $all_meta as $meta_key => $meta_values ) {
+                            if ( '_' === $meta_key[0] ) {
+                                continue;
+                            }
+
+                            if ( 0 !== strpos( $meta_key, $row_prefix ) ) {
+                                continue;
+                            }
+
+                            if ( 0 === strpos( $meta_key, $row_prefix . 'subsection_' ) ) {
+                                continue;
+                            }
+
+                            $row_field = substr( $meta_key, strlen( $row_prefix ) );
+                            if ( 'subsection' === $row_field || '' === $row_field ) {
+                                continue;
+                            }
+
+                            $row_data[ $row_field ] = maybe_unserialize( $meta_values[0] );
+                        }
 
                         for ( $j = 0; $j < $sub_count; $j++ ) {
                             $layout_type = is_array( $sub_layouts ) ? $sub_layouts[ $j ] : '';
@@ -485,7 +616,7 @@ add_action(
                             $subsection[] = $layout_row;
                         }
 
-                        $rows[] = array( 'subsection' => $subsection );
+                        $rows[] = array_merge( $row_data, array( 'subsection' => $subsection ) );
                     }
 
                     return $rows;
@@ -525,8 +656,19 @@ add_filter(
 );
 
 // ─── ACF : Validation des champs requis pour olthem_thematique ────────────────
+//
+// Renseigner ici les clés de champs ACF obligatoires pour qu'une thématique
+// puisse être publiée. Les clés sont au format "field_xxxxxxxx" et se trouvent
+// dans ACF > Groupes de champs > Modifier le champ > Clé du champ.
+//
+// Structure du tableau :
+//   'field_key'  => 'Libellé affiché dans le message d\'erreur'
+//
+// La validation bloque aussi les tentatives via la REST API (pas contournable).
+
 add_action( 'acf/validate_save_post', function () {
 
+    // Déclenche uniquement pour olthem_thematique
     $post_id   = isset( $_POST['post_ID'] ) ? (int) $_POST['post_ID'] : 0;
     $post_type = get_post_type( $post_id );
 
@@ -541,6 +683,10 @@ add_action( 'acf/validate_save_post', function () {
         'field_olthem_thm_visuel'             => 'Visuel du thème',
         'field_olthem_thm_couleur'            => 'Couleur du thème',
     );
+
+    if ( empty( $required_fields ) ) {
+        return;
+    }
 
     $acf_values = isset( $_POST['acf'] ) ? $_POST['acf'] : array();
     $errors     = array();
