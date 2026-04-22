@@ -535,7 +535,7 @@ add_action(
         // Structure : repeater Builder > flexible content subsection > layouts.
 
         register_rest_field(
-            array( 'olthem_thematique', 'olthem_section' ),
+            array( 'olthem_thematique', 'olthem_section', 'page' ),
             'builder',
             array(
                 'get_callback' => function ( $post_item ) {
