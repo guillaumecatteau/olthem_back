@@ -10,8 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action( 'acf/init', function () {
 
-    error_log( '[OLTHEM-DEBUG] acf/init p20 — acf_add_local_field_group: ' . ( function_exists( 'acf_add_local_field_group' ) ? 'YES' : 'NO' ) );
-
     if ( ! function_exists( 'acf_add_local_field_group' ) ) {
         return;
     }
@@ -201,8 +199,6 @@ add_action( 'acf/init', function () {
 
         ),
     ) );
-
-    error_log( '[OLTHEM-DEBUG] acf_add_local_field_group appelé pour group_olthem_thematique' );
 
 }, 20 );
 
@@ -448,6 +444,8 @@ function olthem_headless_allowed_origins() {
         'http://127.0.0.1:3000',
         'http://localhost:5500',
         'http://127.0.0.1:5500',
+        'http://localhost:5501',
+        'http://127.0.0.1:5501',
         'http://localhost/olthem/frontend',
     );
 }
