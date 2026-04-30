@@ -423,9 +423,23 @@ function olthem_rest_forms_submit( WP_REST_Request $request ): WP_REST_Response 
             'nb_participants'      => $nb,
             'start_date'           => $start_date,
             'end_date'             => $end_date,
+            'share_contact'        => olthem_bool_to_int( $values['share_contact'] ?? 0 ),
         );
         if ( $user_id )       $data['user_id']       = $user_id;
         if ( $thematique_id ) $data['thematique_id'] = $thematique_id;
+
+        // Géocodage automatique via Nominatim
+        if ( function_exists( 'olthem_geocode_address' ) ) {
+            $coords = olthem_geocode_address(
+                $data['adresse'],
+                $data['localite'],
+                $data['code_postal']
+            );
+            if ( $coords ) {
+                $data['latitude']  = $coords['lat'];
+                $data['longitude'] = $coords['lng'];
+            }
+        }
 
         $inserted = $wpdb->insert( $table_ateliers, $data );
         if ( ! $inserted ) return new WP_REST_Response( array( 'message' => 'Erreur base de donnees.' ), 500 );
@@ -436,9 +450,70 @@ function olthem_rest_forms_submit( WP_REST_Request $request ): WP_REST_Response 
     return new WP_REST_Response( array( 'message' => 'Processus inconnu.' ), 400 );
 }
 
+// ─── Ateliers publics : validés à venir ────────────────────────────────────────────────────────
+
+function olthem_rest_upcoming_ateliers( WP_REST_Request $request ): WP_REST_Response {
+    global $wpdb;
+
+    $table_ateliers = $wpdb->prefix . 'olthem_ateliers';
+    $table_posts    = $wpdb->posts;
+    $today          = current_time( 'Y-m-d' );
+
+    $rows = $wpdb->get_results( $wpdb->prepare(
+        "SELECT
+            a.id,
+            a.mundaneum,
+            a.etablissement,
+            a.localite,
+            a.code_postal,
+            a.valid_date,
+            a.share_contact,
+            a.email        AS contact_email,
+            a.latitude,
+            a.longitude,
+            a.thematique_id,
+            p.post_title   AS thematique_titre
+         FROM {$table_ateliers} a
+         LEFT JOIN {$table_posts} p ON p.ID = a.thematique_id
+         WHERE a.valid_date IS NOT NULL
+           AND a.valid_date >= %s
+         ORDER BY a.valid_date ASC, a.id ASC",
+        $today
+    ), ARRAY_A );
+
+    if ( ! is_array( $rows ) ) $rows = array();
+
+    $items = array_map( function( $row ) {
+        return array(
+            'id'               => (int) $row['id'],
+            'mundaneum'        => (bool) $row['mundaneum'],
+            'etablissement'    => (string) $row['etablissement'],
+            'localite'         => (string) $row['localite'],
+            'code_postal'      => (string) $row['code_postal'],
+            'valid_date'       => (string) $row['valid_date'],
+            'share_contact'    => (bool) $row['share_contact'],
+            // N'exposer l'email que si share_contact est activé
+            'contact_email'    => ( (int) $row['share_contact'] === 1 ) ? (string) $row['contact_email'] : null,
+            'latitude'         => isset( $row['latitude'] )  && $row['latitude']  !== null ? (float) $row['latitude']  : null,
+            'longitude'        => isset( $row['longitude'] ) && $row['longitude'] !== null ? (float) $row['longitude'] : null,
+            'thematique_id'    => $row['thematique_id'] ? (int) $row['thematique_id'] : null,
+            'thematique_titre' => (string) $row['thematique_titre'],
+        );
+    }, $rows );
+
+    return new WP_REST_Response( $items, 200 );
+}
+
 // ─── Enregistrement des routes ───────────────────────────────────────────────
 
 add_action( 'rest_api_init', function () {
+
+    // Ateliers publics
+    register_rest_route( 'olthem/v1', '/ateliers/upcoming', array(
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => 'olthem_rest_upcoming_ateliers',
+        'permission_callback' => '__return_true',
+    ) );
 
     // Overview
     register_rest_route( 'olthem/v1', '/admin/overview', array(

@@ -249,6 +249,40 @@ add_filter( 'acf/load_field_group', function ( $group ) {
     return $group;
 } );
 
+// ─── ACF : Champ local "mapbox_token" sur la page d'options ─────────────────
+
+add_action( 'acf/init', function () {
+    if ( ! function_exists( 'acf_add_local_field_group' ) ) {
+        return;
+    }
+
+    acf_add_local_field_group( array(
+        'key'      => 'group_olthem_mapbox',
+        'title'    => 'Configuration carte',
+        'active'   => true,
+        'location' => array(
+            array(
+                array(
+                    'param'    => 'options_page',
+                    'operator' => '==',
+                    'value'    => 'olthem-informations-generales',
+                ),
+            ),
+        ),
+        'fields' => array(
+            array(
+                'key'          => 'field_olthem_mapbox_token',
+                'label'        => 'Token Mapbox',
+                'name'         => 'mapbox_token',
+                'type'         => 'text',
+                'instructions' => 'Token public Mapbox (pk.eyJ...). Restreindre le domaine dans le dashboard Mapbox.',
+                'placeholder'  => 'pk.eyJ1IjoiLi4uIn0...',
+                'required'     => 0,
+            ),
+        ),
+    ) );
+}, 30 );
+
 function olthem_register_content_types() {
     register_post_type(
         'olthem_section',
@@ -477,6 +511,7 @@ add_action(
                     $facebook_url = get_field( 'Facebook', 'option' );
                     $x_url = get_field( 'X', 'option' );
                     $instagram_url = get_field( 'Instagram', 'option' );
+                    $mapbox_token = get_field( 'mapbox_token', 'option' );
 
                     // Si rien, essayer avec 'options' (variante)
                     if ( ! $facebook_url ) {
@@ -488,11 +523,19 @@ add_action(
                     if ( ! $instagram_url ) {
                         $instagram_url = get_field( 'Instagram', 'options' );
                     }
+                    if ( ! $mapbox_token ) {
+                        $mapbox_token = get_field( 'mapbox_token', 'options' );
+                    }
+                    // Fallback direct wp_options pour les champs ACF locaux
+                    if ( ! $mapbox_token ) {
+                        $mapbox_token = get_option( 'options_mapbox_token', '' );
+                    }
 
                     return array(
                         'facebook_url'      => $facebook_url ?: '',
                         'X_url'             => $x_url ?: '',
                         'instagram_url'     => $instagram_url ?: '',
+                        'mapbox_token'      => $mapbox_token ?: '',
                     );
                 },
             )

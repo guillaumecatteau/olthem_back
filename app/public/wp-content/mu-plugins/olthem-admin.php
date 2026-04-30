@@ -166,6 +166,45 @@ add_action( 'personal_options_update', 'olthem_save_user_profile_fields' );
 add_action( 'edit_user_profile_update', 'olthem_save_user_profile_fields' );
 
 
+// ─── Geocoding via Nominatim (OpenStreetMap) ──────────────────────────────────────────────────
+
+/**
+ * Géocode une adresse via l'API Nominatim (OpenStreetMap).
+ * Retourne array ['lat' => float, 'lng' => float] ou null si introuvable.
+ * Respecte la politique d'usage Nominatim : User-Agent identifié, pas de spam.
+ */
+function olthem_geocode_address( string $adresse, string $localite, string $code_postal ): ?array {
+    $query = trim( implode( ', ', array_filter( array( $adresse, $code_postal . ' ' . $localite, 'Belgique' ) ) ) );
+    if ( '' === $query ) return null;
+
+    $url = add_query_arg( array(
+        'q'              => $query,
+        'format'         => 'jsonv2',
+        'limit'          => '1',
+        'addressdetails' => '0',
+        'countrycodes'   => 'be',
+    ), 'https://nominatim.openstreetmap.org/search' );
+
+    $response = wp_remote_get( $url, array(
+        'timeout'    => 5,
+        'user-agent' => 'Olthem-Headless/1.0 (contact@mundaneum.be)',
+    ) );
+
+    if ( is_wp_error( $response ) ) return null;
+
+    $body = wp_remote_retrieve_body( $response );
+    $data = json_decode( $body, true );
+
+    if ( ! is_array( $data ) || empty( $data[0] ) ) return null;
+
+    $lat = isset( $data[0]['lat'] ) ? (float) $data[0]['lat'] : null;
+    $lng = isset( $data[0]['lon'] ) ? (float) $data[0]['lon'] : null;
+
+    if ( null === $lat || null === $lng ) return null;
+
+    return array( 'lat' => $lat, 'lng' => $lng );
+}
+
 // ─── Back-office : page Ateliers ────────────────────────────────────────────
 
 function olthem_register_ateliers_admin_page() {
@@ -215,6 +254,7 @@ function olthem_handle_create_atelier() {
     $end_date             = isset( $_POST['end_date'] ) ? sanitize_text_field( wp_unslash( $_POST['end_date'] ) ) : '';
     $valid_date           = isset( $_POST['valid_date'] ) ? sanitize_text_field( wp_unslash( $_POST['valid_date'] ) ) : '';
     $nb_participants      = isset( $_POST['nb_participants'] ) ? (int) $_POST['nb_participants'] : 0;
+    $share_contact        = isset( $_POST['share_contact'] ) ? 1 : 0;
 
     foreach ( array( $start_date, $end_date, $valid_date ) as $date_value ) {
         if ( '' !== $date_value && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date_value ) ) {
@@ -252,9 +292,17 @@ function olthem_handle_create_atelier() {
         'end_date'             => ( '' !== $end_date ) ? $end_date : null,
         'valid_date'           => ( '' !== $valid_date ) ? $valid_date : null,
         'nb_participants'      => $nb_participants,
+        'share_contact'        => $share_contact,
     );
 
-    $format = array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' );
+    // Géocodage automatique via Nominatim
+    $coords = olthem_geocode_address( $adresse, $localite, $code_postal );
+    if ( $coords ) {
+        $data['latitude']  = $coords['lat'];
+        $data['longitude'] = $coords['lng'];
+    }
+
+    $format = array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' );
 
     if ( $user_id > 0 ) {
         $data['user_id'] = $user_id;
@@ -365,6 +413,8 @@ function olthem_render_ateliers_admin_page() {
 
     echo '<tr><th><label for="nb_participants">Nombre de participants</label></th><td><input type="number" min="0" id="nb_participants" name="nb_participants" value="0" /></td></tr>';
 
+    echo '<tr><th><label for="share_contact">Partager le contact</label></th><td><input type="checkbox" id="share_contact" name="share_contact" value="1" /><p class="description">Si coché, l\'email de contact sera visible publiquement sur le site.</p></td></tr>';
+
     echo '</table>';
     submit_button( 'Creer l\'atelier' );
     echo '</form>';
@@ -408,6 +458,8 @@ function olthem_render_ateliers_admin_page() {
     echo '<th>End date</th>';
     echo '<th>Valid date</th>';
     echo '<th>Participants</th>';
+    echo '<th>Share contact</th>';
+    echo '<th>Lat/Lng</th>';
     echo '<th>Created at</th>';
     echo '</tr></thead>';
     echo '<tbody>';
@@ -432,6 +484,11 @@ function olthem_render_ateliers_admin_page() {
         echo '<td>' . esc_html( (string) $atelier->end_date ) . '</td>';
         echo '<td>' . esc_html( (string) $atelier->valid_date ) . '</td>';
         echo '<td>' . esc_html( (string) $atelier->nb_participants ) . '</td>';
+        echo '<td>' . esc_html( (int) $atelier->share_contact ? 'Oui' : 'Non' ) . '</td>';
+        $lat_lng = ( $atelier->latitude && $atelier->longitude )
+            ? esc_html( $atelier->latitude ) . ', ' . esc_html( $atelier->longitude )
+            : '—';
+        echo '<td>' . $lat_lng . '</td>';
         echo '<td>' . esc_html( (string) $atelier->created_at ) . '</td>';
         echo '</tr>';
     }

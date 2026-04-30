@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // ─── Version de la structure BDD ────────────────────────────────────────────
-define( 'OLTHEM_DB_VERSION', '1.3.0' );
+define( 'OLTHEM_DB_VERSION', '1.4.0' );
 
 
 // ─── Création des tables ─────────────────────────────────────────────────────
@@ -73,6 +73,9 @@ function olthem_create_tables() {
             end_date             DATE                DEFAULT NULL,
             valid_date           DATE                DEFAULT NULL,
             nb_participants      INT                 DEFAULT NULL,
+            share_contact        TINYINT(1)          NOT NULL DEFAULT 0,
+            latitude             DECIMAL(10,7)       DEFAULT NULL,
+            longitude            DECIMAL(10,7)       DEFAULT NULL,
             created_at           DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY user_id (user_id),
@@ -100,6 +103,18 @@ function olthem_create_tables() {
                 ON DELETE SET NULL
                 ON UPDATE CASCADE" );
         }
+
+    // ── Migration 1.4.0 : colonnes map (ALTER TABLE pour prod, ignoré si déjà présentes)
+    $cols = $wpdb->get_col( "SHOW COLUMNS FROM {$table_ateliers}" );
+    if ( ! in_array( 'share_contact', $cols, true ) ) {
+        $wpdb->query( "ALTER TABLE {$table_ateliers} ADD COLUMN share_contact TINYINT(1) NOT NULL DEFAULT 0" );
+    }
+    if ( ! in_array( 'latitude', $cols, true ) ) {
+        $wpdb->query( "ALTER TABLE {$table_ateliers} ADD COLUMN latitude DECIMAL(10,7) DEFAULT NULL" );
+    }
+    if ( ! in_array( 'longitude', $cols, true ) ) {
+        $wpdb->query( "ALTER TABLE {$table_ateliers} ADD COLUMN longitude DECIMAL(10,7) DEFAULT NULL" );
+    }
 
     update_option( 'olthem_db_version', OLTHEM_DB_VERSION );
 }

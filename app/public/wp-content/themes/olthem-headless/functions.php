@@ -1,5 +1,14 @@
 <?php
 
+add_action('admin_head', function() {
+  echo '<style>
+.acf-input .acf-input-prepend,
+.acf-input .acf-input-append {
+  height: fit-content !important;
+}
+</style>';
+});
+
 add_action('acf/init', function() {
   if( function_exists('acf_add_options_page') ) {
 

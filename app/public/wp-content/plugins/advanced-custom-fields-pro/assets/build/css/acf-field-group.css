@@ -1846,7 +1846,7 @@ html[dir=rtl] .acf-field-object.open > .handle {
 .acf-input .acf-input-append {
   display: inline-flex;
   align-items: center;
-  height: 100%;
+  height: fit-content;
   min-height: 40px;
   padding-right: 12px;
   padding-left: 12px;
