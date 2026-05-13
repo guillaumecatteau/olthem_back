@@ -466,6 +466,7 @@ function olthem_rest_upcoming_ateliers( WP_REST_Request $request ): WP_REST_Resp
             a.etablissement,
             a.localite,
             a.code_postal,
+            a.adresse,
             a.valid_date,
             a.share_contact,
             a.email        AS contact_email,
@@ -490,6 +491,7 @@ function olthem_rest_upcoming_ateliers( WP_REST_Request $request ): WP_REST_Resp
             'etablissement'    => (string) $row['etablissement'],
             'localite'         => (string) $row['localite'],
             'code_postal'      => (string) $row['code_postal'],
+            'adresse'          => (string) $row['adresse'],
             'valid_date'       => (string) $row['valid_date'],
             'share_contact'    => (bool) $row['share_contact'],
             // N'exposer l'email que si share_contact est activé

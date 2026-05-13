@@ -174,6 +174,33 @@ add_action( 'acf/init', function () {
             ),
 
             array(
+                'key'           => 'field_olthem_thm_visuel_mobile',
+                'label'         => 'Visuel mobile',
+                'name'          => 'visuel_mobile',
+                'type'          => 'image',
+                'required'      => 0,
+                'instructions'  => 'Visuel optimisé pour mobile (optionnel). Si absent, le visuel principal est utilisé. Recommandé : 400 × 300 px.',
+                'return_format' => 'array',
+                'preview_size'  => 'medium',
+                'library'       => 'all',
+            ),
+
+            array(
+                'key'           => 'field_olthem_thm_mobile_header_scale',
+                'label'         => 'Mobile header scaling',
+                'name'          => 'mobile_header_scale',
+                'type'          => 'number',
+                'required'      => 0,
+                'instructions'  => 'Facteur de zoom de l\'image dans les header cards mobiles. 1 = 100% (hauteur exacte de la carte), 1.2 = 120%, etc. Laisser vide pour utiliser la valeur par défaut (1.1).',
+                'default_value' => '',
+                'min'           => 0.5,
+                'max'           => 3,
+                'step'          => 0.05,
+                'prepend'       => '',
+                'append'        => '×',
+            ),
+
+            array(
                 'key'            => 'field_olthem_thm_couleur',
                 'label'          => 'Couleur du thème',
                 'name'           => 'couleur',
@@ -551,6 +578,8 @@ add_action(
             'header'             => 'boolean',
             'header_position'    => 'string',
             'visuel'             => 'object',
+            'visuel_mobile'      => 'object',
+            'mobile_header_scale' => 'number',
             'couleur'            => 'string',
             'couleur_sombre'     => 'string',
         );

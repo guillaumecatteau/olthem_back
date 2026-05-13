@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * olthem-db.php — Structure de base de données.
  *

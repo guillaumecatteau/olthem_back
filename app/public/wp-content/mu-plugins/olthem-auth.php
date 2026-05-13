@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 /**
  * olthem-auth.php
@@ -474,6 +474,72 @@ function olthem_rest_check_username( WP_REST_Request $request ) {
     return new WP_REST_Response( array( 'available' => ! $taken ), 200 );
 }
 
+// ─── REST : forgot-password ───────────────────────────────────────────────────
+
+function olthem_rest_forgot_password( WP_REST_Request $request ) {
+    $params       = $request->get_json_params() ?: $request->get_params();
+    $email        = sanitize_email( (string) ( $params['email'] ?? '' ) );
+    $redirect_url = esc_url_raw( (string) ( $params['redirect_url'] ?? '' ) );
+
+    // Always return 200 to avoid leaking whether the email exists.
+    if ( ! is_email( $email ) ) {
+        return new WP_REST_Response( array( 'message' => 'Email invalide.' ), 400 );
+    }
+
+    $user = get_user_by( 'email', $email );
+    if ( ! $user ) {
+        return new WP_REST_Response( array( 'message' => 'Si ce compte existe, un email a ete envoye.' ), 200 );
+    }
+
+    $key = get_password_reset_key( $user );
+    if ( is_wp_error( $key ) ) {
+        return new WP_REST_Response( array( 'message' => 'Impossible de generer un lien de reinitialisation.' ), 500 );
+    }
+
+    // Build reset URL pointing to the front-end (or WP home as fallback).
+    $base = $redirect_url ?: get_option( 'siteurl' );
+    $reset_url = add_query_arg( array(
+        'action' => 'reset-password',
+        'key'    => rawurlencode( $key ),
+        'login'  => rawurlencode( $user->user_login ),
+    ), $base );
+
+    $site_name = get_option( 'blogname' );
+    $subject   = sprintf( '[%s] Réinitialisation de votre mot de passe', $site_name );
+    $message   = sprintf(
+        "Bonjour %s,\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :\n%s\n\nCe lien est valable 24 heures.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\n— %s",
+        esc_html( $user->display_name ),
+        esc_url_raw( $reset_url ),
+        esc_html( $site_name )
+    );
+
+    wp_mail( $email, $subject, $message );
+
+    return new WP_REST_Response( array( 'message' => 'Si ce compte existe, un email a ete envoye.' ), 200 );
+}
+
+// ─── REST : reset-password ────────────────────────────────────────────────────
+
+function olthem_rest_reset_password( WP_REST_Request $request ) {
+    $params   = $request->get_json_params() ?: $request->get_params();
+    $key      = sanitize_text_field( (string) ( $params['key']      ?? '' ) );
+    $login    = sanitize_text_field( (string) ( $params['login']    ?? '' ) );
+    $password = (string) ( $params['password'] ?? '' );
+
+    if ( '' === $key || '' === $login || strlen( $password ) < 8 ) {
+        return new WP_REST_Response( array( 'message' => 'Donnees invalides.' ), 400 );
+    }
+
+    $user = check_password_reset_key( $key, $login );
+    if ( is_wp_error( $user ) ) {
+        return new WP_REST_Response( array( 'message' => 'Lien invalide ou expire. Veuillez recommencer.' ), 400 );
+    }
+
+    reset_password( $user, $password );
+
+    return new WP_REST_Response( array( 'message' => 'Mot de passe mis a jour.' ), 200 );
+}
+
 function olthem_register_auth_rest_routes() {
     register_rest_route( 'olthem/v1', '/auth/register', array(
         'methods'             => WP_REST_Server::CREATABLE,
@@ -520,6 +586,18 @@ function olthem_register_auth_rest_routes() {
     register_rest_route( 'olthem/v1', '/auth/check-username', array(
         'methods'             => WP_REST_Server::READABLE,
         'callback'            => 'olthem_rest_check_username',
+        'permission_callback' => '__return_true',
+    ) );
+
+    register_rest_route( 'olthem/v1', '/auth/forgot-password', array(
+        'methods'             => WP_REST_Server::CREATABLE,
+        'callback'            => 'olthem_rest_forgot_password',
+        'permission_callback' => '__return_true',
+    ) );
+
+    register_rest_route( 'olthem/v1', '/auth/reset-password', array(
+        'methods'             => WP_REST_Server::CREATABLE,
+        'callback'            => 'olthem_rest_reset_password',
         'permission_callback' => '__return_true',
     ) );
 }

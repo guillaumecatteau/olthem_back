@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 /**
  * olthem-admin.php
@@ -186,7 +186,7 @@ function olthem_geocode_address( string $adresse, string $localite, string $code
     ), 'https://nominatim.openstreetmap.org/search' );
 
     $response = wp_remote_get( $url, array(
-        'timeout'    => 5,
+        'timeout'    => 3,
         'user-agent' => 'Olthem-Headless/1.0 (contact@mundaneum.be)',
     ) );
 
