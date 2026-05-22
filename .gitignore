@@ -29,7 +29,5 @@ app/public/wp-content/uploads/cache/**
 app/public/wp-content/uploads/
 app/public/wp-content/uploads/**
 
-# Track database dump used for local environment sync
-!app/sql/
-app/sql/*
-!app/sql/local.sql
+# Database dumps are local-only, not tracked in git
+app/sql/

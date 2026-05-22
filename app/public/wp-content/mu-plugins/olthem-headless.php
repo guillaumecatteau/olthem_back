@@ -539,6 +539,7 @@ add_action(
                     $x_url = get_field( 'X', 'option' );
                     $instagram_url = get_field( 'Instagram', 'option' );
                     $mapbox_token = get_field( 'mapbox_token', 'option' );
+                    $site_url     = get_field( 'site_url', 'option' );
 
                     // Si rien, essayer avec 'options' (variante)
                     if ( ! $facebook_url ) {
@@ -553,16 +554,23 @@ add_action(
                     if ( ! $mapbox_token ) {
                         $mapbox_token = get_field( 'mapbox_token', 'options' );
                     }
+                    if ( ! $site_url ) {
+                        $site_url = get_field( 'site_url', 'options' );
+                    }
                     // Fallback direct wp_options pour les champs ACF locaux
                     if ( ! $mapbox_token ) {
                         $mapbox_token = get_option( 'options_mapbox_token', '' );
                     }
+                    if ( ! $site_url ) {
+                        $site_url = get_option( 'options_informations_generales_site_url', '' );
+                    }
 
                     return array(
-                        'facebook_url'      => $facebook_url ?: '',
-                        'X_url'             => $x_url ?: '',
-                        'instagram_url'     => $instagram_url ?: '',
-                        'mapbox_token'      => $mapbox_token ?: '',
+                        'facebook_url'  => $facebook_url ?: '',
+                        'X_url'         => $x_url         ?: '',
+                        'instagram_url' => $instagram_url ?: '',
+                        'mapbox_token'  => $mapbox_token  ?: '',
+                        'site_url'      => $site_url      ?: '',
                     );
                 },
             )
