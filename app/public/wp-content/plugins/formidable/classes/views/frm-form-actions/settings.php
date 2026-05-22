@@ -40,7 +40,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<ul class="frm_actions_list">
 			<?php
 			foreach ( $action_controls as $action_control ) {
-				if ( in_array( $action_control->id_base, $displayed_actions ) || ! in_array( $action_control->id_base, $group['actions'] ) ) {
+				if ( in_array( $action_control->id_base, $displayed_actions, true ) || ! in_array( $action_control->id_base, $group['actions'], true ) ) {
 					continue;
 				}
 
@@ -49,24 +49,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 			}
 
 			foreach ( $group['actions'] as $action ) {
-				if ( in_array( $action, $displayed_actions ) ) {
+				if ( in_array( $action, $displayed_actions, true ) ) {
 					continue;
 				}
+
+				$icon_atts = isset( $group['color'] ) ? array( 'style' => '--primary-700:' . $group['color'] ) : array();
 				?>
 					<li class="frm-action frm-not-installed">
 						<a href="javascript:void(0)" class="frm-single-action frm_show_upgrade">
 							<span class="frm-outer-circle">
 								<span class="frm-inner-circle" <?php FrmAppHelper::array_to_html_params( $icon_atts, true ); ?>>
-								<?php
-								$icon_atts = array();
-
-								if ( isset( $group['color'] ) ) {
-									$icon_atts = array(
-										'style' => '--primary-700:' . $group['color'],
-									);
-								}
-								FrmAppHelper::icon_by_class( 'frmfont frm_plus_icon', $icon_atts );
-								?>
+								<?php FrmAppHelper::icon_by_class( 'frmfont frm_plus_icon', $icon_atts ); ?>
 								</span>
 							</span>
 							<?php echo esc_html( $action ); ?>

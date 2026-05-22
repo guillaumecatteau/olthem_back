@@ -185,8 +185,8 @@ function olthem_upsert_custom_user_row( $wp_user_id, $payload ) {
         array(
             'id'         => (int) $wp_user_id,
             'username'   => (string) ( $payload['username'] ?? get_user_meta( $wp_user_id, 'nickname', true ) ),
-            'nom'        => (string) ( $payload['nom'] ?? get_user_meta( $wp_user_id, 'last_name', true ) ),
-            'prenom'     => (string) ( $payload['prenom'] ?? get_user_meta( $wp_user_id, 'first_name', true ) ),
+            'last_name'  => (string) ( $payload['last_name'] ?? get_user_meta( $wp_user_id, 'last_name', true ) ),
+            'first_name' => (string) ( $payload['first_name'] ?? get_user_meta( $wp_user_id, 'first_name', true ) ),
             'email'      => (string) $wp_user->user_email,
             'password'   => (string) $wp_user->user_pass,
             'remember'   => olthem_bool_to_int( $payload['remember'] ?? get_user_meta( $wp_user_id, 'remember', true ) ),
@@ -201,8 +201,8 @@ function olthem_format_user_payload( $user ) {
     return array(
         'id'         => (int) $user->ID,
         'username'   => (string) get_user_meta( $user->ID, 'nickname', true ),
-        'nom'        => (string) get_user_meta( $user->ID, 'last_name', true ),
-        'prenom'     => (string) get_user_meta( $user->ID, 'first_name', true ),
+        'last_name'  => (string) get_user_meta( $user->ID, 'last_name', true ),
+        'first_name' => (string) get_user_meta( $user->ID, 'first_name', true ),
         'email'      => (string) $user->user_email,
         'remember'   => olthem_bool_to_int( get_user_meta( $user->ID, 'remember', true ) ),
         'newsletter' => olthem_bool_to_int( get_user_meta( $user->ID, 'newsletter', true ) ),
@@ -220,8 +220,8 @@ function olthem_rest_register( WP_REST_Request $request ) {
     $email    = sanitize_email( (string) ( $params['email'] ?? '' ) );
     $password = (string) ( $params['password'] ?? '' );
     $username = sanitize_text_field( (string) ( $params['username'] ?? '' ) );
-    $nom      = sanitize_text_field( (string) ( $params['nom'] ?? '' ) );
-    $prenom   = sanitize_text_field( (string) ( $params['prenom'] ?? '' ) );
+    $nom      = sanitize_text_field( (string) ( $params['last_name']  ?? '' ) );
+    $prenom   = sanitize_text_field( (string) ( $params['first_name'] ?? '' ) );
 
     if ( ! is_email( $email ) ) {
         return new WP_REST_Response( array( 'message' => 'Email invalide.' ), 400 );
@@ -265,8 +265,8 @@ function olthem_rest_register( WP_REST_Request $request ) {
 
     olthem_upsert_custom_user_row( $user_id, array(
         'username'   => $nickname,
-        'nom'        => $nom,
-        'prenom'     => $prenom,
+        'last_name'  => $nom,
+        'first_name' => $prenom,
         'remember'   => $remember,
         'newsletter' => $newsletter,
         'is_admin'   => $is_admin,
@@ -362,8 +362,8 @@ function olthem_rest_me_update( WP_REST_Request $request ) {
 
     $params   = $request->get_json_params() ?: $request->get_params();
     $username = isset( $params['username'] ) ? sanitize_text_field( (string) $params['username'] ) : null;
-    $nom      = isset( $params['nom'] )      ? sanitize_text_field( (string) $params['nom'] )      : null;
-    $prenom   = isset( $params['prenom'] )   ? sanitize_text_field( (string) $params['prenom'] )   : null;
+    $nom      = isset( $params['last_name'] )  ? sanitize_text_field( (string) $params['last_name'] )  : null;
+    $prenom   = isset( $params['first_name'] ) ? sanitize_text_field( (string) $params['first_name'] ) : null;
     $newsletter = isset( $params['newsletter'] ) ? olthem_bool_to_int( $params['newsletter'] ) : null;
 
     $update = array( 'ID' => $user->ID );
@@ -402,7 +402,7 @@ function olthem_rest_me_ateliers( WP_REST_Request $request ) {
     $rows = $wpdb->get_results( $wpdb->prepare(
         "SELECT a.*, p.post_title AS thematique_title
          FROM {$table_ateliers} a
-         LEFT JOIN {$table_posts} p ON p.ID = a.thematique_id
+         LEFT JOIN {$table_posts} p ON p.ID = a.thematic_id
          WHERE a.user_id = %d
          ORDER BY a.created_at DESC",
         (int) $user->ID
@@ -437,7 +437,7 @@ function olthem_rest_me_atelier_update( WP_REST_Request $request ) {
     $params = $request->get_json_params() ?: array();
     $values = is_array( $params['values'] ?? null ) ? $params['values'] : $params;
 
-    $allowed = array( 'telephone', 'nb_participants', 'start_date', 'end_date', 'etablissement', 'adresse', 'localite', 'code_postal' );
+    $allowed = array( 'phone', 'participants_count', 'start_date', 'end_date', 'institution', 'address', 'city', 'postal_code' );
     $data    = array();
     foreach ( $allowed as $col ) {
         if ( array_key_exists( $col, $values ) ) {
@@ -453,7 +453,7 @@ function olthem_rest_me_atelier_update( WP_REST_Request $request ) {
     return new WP_REST_Response( array( 'message' => 'Atelier mis a jour.' ), 200 );
 }
 
-// ─── REST : check-username ────────────────────────────────────────────────────
+// ─── REST : vérification du nom d'utilisateur ──────────────────────────────────
 
 function olthem_rest_check_username( WP_REST_Request $request ) {
     $username        = sanitize_text_field( (string) ( $request->get_param( 'username' ) ?? '' ) );
@@ -474,14 +474,14 @@ function olthem_rest_check_username( WP_REST_Request $request ) {
     return new WP_REST_Response( array( 'available' => ! $taken ), 200 );
 }
 
-// ─── REST : forgot-password ───────────────────────────────────────────────────
+// ─── REST : mot de passe oublié ────────────────────────────────────────────────
 
 function olthem_rest_forgot_password( WP_REST_Request $request ) {
     $params       = $request->get_json_params() ?: $request->get_params();
     $email        = sanitize_email( (string) ( $params['email'] ?? '' ) );
     $redirect_url = esc_url_raw( (string) ( $params['redirect_url'] ?? '' ) );
 
-    // Always return 200 to avoid leaking whether the email exists.
+    // Toujours renvoyer 200 pour ne pas révéler l'existence du compte.
     if ( ! is_email( $email ) ) {
         return new WP_REST_Response( array( 'message' => 'Email invalide.' ), 400 );
     }
@@ -496,7 +496,7 @@ function olthem_rest_forgot_password( WP_REST_Request $request ) {
         return new WP_REST_Response( array( 'message' => 'Impossible de generer un lien de reinitialisation.' ), 500 );
     }
 
-    // Build reset URL pointing to the front-end (or WP home as fallback).
+    // Construction de l'URL de réinitialisation vers le front (ou l'accueil WP en dernier recours).
     $base = $redirect_url ?: get_option( 'siteurl' );
     $reset_url = add_query_arg( array(
         'action' => 'reset-password',
@@ -504,14 +504,34 @@ function olthem_rest_forgot_password( WP_REST_Request $request ) {
         'login'  => rawurlencode( $user->user_login ),
     ), $base );
 
-    $site_name = get_option( 'blogname' );
-    $subject   = sprintf( '[%s] Réinitialisation de votre mot de passe', $site_name );
-    $message   = sprintf(
-        "Bonjour %s,\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :\n%s\n\nCe lien est valable 24 heures.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\n— %s",
-        esc_html( $user->display_name ),
-        esc_url_raw( $reset_url ),
-        esc_html( $site_name )
-    );
+    // Chargement du template depuis la BDD.
+    global $wpdb;
+    $table_tpl = $wpdb->prefix . 'olthem_email_templates';
+    $tpl = $wpdb->get_row( $wpdb->prepare(
+        "SELECT subject, body FROM {$table_tpl} WHERE event_key = %s LIMIT 1",
+        'reset_password'
+    ) );
+
+    $prenom = (string) get_user_meta( $user->ID, 'first_name', true );
+    $nom    = (string) get_user_meta( $user->ID, 'last_name', true );
+
+    if ( $tpl ) {
+        $subject = $tpl->subject;
+        $message = str_replace(
+            array( '[first_name]', '[last_name]', '[RESET_LINK]' ),
+            array( $prenom ?: $user->display_name, $nom, esc_url_raw( $reset_url ) ),
+            $tpl->body
+        );
+    } else {
+        $site_name = get_option( 'blogname' );
+        $subject   = sprintf( '[%s] Réinitialisation de votre mot de passe', $site_name );
+        $message   = sprintf(
+            "Bonjour %s,\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :\n%s\n\nCe lien est valable 24 heures.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\n— %s",
+            esc_html( $user->display_name ),
+            esc_url_raw( $reset_url ),
+            esc_html( $site_name )
+        );
+    }
 
     wp_mail( $email, $subject, $message );
 

@@ -25,6 +25,10 @@ app/public/wp-content/cache/**
 app/public/wp-content/uploads/cache/
 app/public/wp-content/uploads/cache/**
 
+# Ignore uploaded media files (heavy binary assets)
+app/public/wp-content/uploads/
+app/public/wp-content/uploads/**
+
 # Track database dump used for local environment sync
 !app/sql/
 app/sql/*

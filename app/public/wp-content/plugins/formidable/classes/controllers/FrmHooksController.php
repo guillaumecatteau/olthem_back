@@ -13,12 +13,11 @@ class FrmHooksController {
 	 * @return void
 	 */
 	public static function trigger_load_hook( $hooks = 'load_hooks' ) {
-		$controllers = apply_filters( 'frm_load_controllers', array( 'FrmHooksController' ) );
-
+		$controllers   = apply_filters( 'frm_load_controllers', array( 'FrmHooksController' ) );
 		$trigger_hooks = $hooks;
 		$hooks         = (array) $hooks;
 
-		if ( 'load_hooks' == $trigger_hooks ) {
+		if ( 'load_hooks' === $trigger_hooks ) {
 			if ( is_admin() ) {
 				$hooks[] = 'load_admin_hooks';
 
@@ -147,6 +146,9 @@ class FrmHooksController {
 		}
 
 		add_action( 'frm_after_duplicate_form', 'FrmFormActionsController::duplicate_form_actions', 20, 3 );
+
+		// Fields Model.
+		add_filter( 'frm_pro_available_fields', 'FrmField::show_update_for_pro_fields' );
 
 		// Forms Controller.
 		add_action( 'admin_menu', 'FrmFormsController::menu', 10 );

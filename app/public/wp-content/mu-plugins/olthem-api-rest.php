@@ -39,7 +39,7 @@ function olthem_admin_permission_callback(): bool {
     return olthem_require_admin_token() !== null;
 }
 
-// ─── Overview ────────────────────────────────────────────────────────────────
+// ─── Tableau de bord ────────────────────────────────────────────────────────
 
 function olthem_rest_admin_overview( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -69,7 +69,7 @@ function olthem_rest_admin_overview( WP_REST_Request $request ): WP_REST_Respons
                 p.post_title AS thematique
          FROM {$table_ateliers} a
          LEFT JOIN {$table_users} u ON u.id = a.user_id
-         LEFT JOIN {$table_posts} p ON p.ID = a.thematique_id
+         LEFT JOIN {$table_posts} p ON p.ID = a.thematic_id
          ORDER BY a.created_at DESC, a.id DESC
          LIMIT 5",
         ARRAY_A
@@ -92,7 +92,7 @@ function olthem_rest_admin_overview( WP_REST_Request $request ): WP_REST_Respons
     ), 200 );
 }
 
-// ─── Users list ──────────────────────────────────────────────────────────────
+// ─── Liste des utilisateurs ─────────────────────────────────────────────────
 
 function olthem_rest_admin_users( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -102,7 +102,7 @@ function olthem_rest_admin_users( WP_REST_Request $request ): WP_REST_Response {
     $per_page = max( 1, (int) ( $request->get_param( 'per_page' ) ?? 25 ) );
     $offset   = ( $page - 1 ) * $per_page;
 
-    $allowed_sort = array( 'id', 'username', 'nom', 'prenom', 'email', 'created_at', 'is_admin' );
+    $allowed_sort = array( 'id', 'username', 'last_name', 'first_name', 'email', 'created_at', 'is_admin' );
     $sort_by      = in_array( $request->get_param( 'sort_by' ), $allowed_sort, true )
         ? $request->get_param( 'sort_by' ) : 'created_at';
     $sort_dir     = strtoupper( $request->get_param( 'sort_dir' ) ?? 'DESC' ) === 'ASC' ? 'ASC' : 'DESC';
@@ -110,7 +110,7 @@ function olthem_rest_admin_users( WP_REST_Request $request ): WP_REST_Response {
     $where  = array( '1=1' );
     $values = array();
 
-    foreach ( array( 'id', 'username', 'nom', 'prenom', 'email' ) as $col ) {
+    foreach ( array( 'id', 'username', 'last_name', 'first_name', 'email' ) as $col ) {
         $val = sanitize_text_field( (string) ( $request->get_param( $col ) ?? '' ) );
         if ( '' !== $val ) {
             $where[]  = "`{$col}` LIKE %s";
@@ -139,7 +139,7 @@ function olthem_rest_admin_users( WP_REST_Request $request ): WP_REST_Response {
     ) );
 
     $query = $wpdb->prepare(
-        "SELECT id, username, nom, prenom, email, remember, newsletter, is_admin, created_at
+        "SELECT id, username, last_name, first_name, email, remember, newsletter, is_admin, created_at
          FROM {$table} WHERE {$where_sql}
          ORDER BY `{$sort_by}` {$sort_dir}
          LIMIT %d OFFSET %d",
@@ -151,8 +151,8 @@ function olthem_rest_admin_users( WP_REST_Request $request ): WP_REST_Response {
         return array(
             'id'         => (int)    $row['id'],
             'username'   => (string) $row['username'],
-            'nom'        => (string) $row['nom'],
-            'prenom'     => (string) $row['prenom'],
+            'last_name'  => (string) $row['last_name'],
+            'first_name' => (string) $row['first_name'],
             'email'      => (string) $row['email'],
             'remember'   => (int)    $row['remember'],
             'newsletter' => (int)    $row['newsletter'],
@@ -169,7 +169,7 @@ function olthem_rest_admin_users( WP_REST_Request $request ): WP_REST_Response {
     ), 200 );
 }
 
-// ─── User update ─────────────────────────────────────────────────────────────
+// ─── Mise à jour d'un utilisateur ───────────────────────────────────────────
 
 function olthem_rest_admin_user_update( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -183,7 +183,7 @@ function olthem_rest_admin_user_update( WP_REST_Request $request ): WP_REST_Resp
         return new WP_REST_Response( array( 'message' => 'Utilisateur introuvable.' ), 404 );
     }
 
-    $allowed = array( 'username', 'nom', 'prenom', 'email', 'newsletter', 'isAdmin' );
+    $allowed = array( 'username', 'last_name', 'first_name', 'email', 'newsletter', 'isAdmin' );
     $data    = array();
     foreach ( $allowed as $key ) {
         if ( ! array_key_exists( $key, $params ) ) continue;
@@ -198,13 +198,13 @@ function olthem_rest_admin_user_update( WP_REST_Request $request ): WP_REST_Resp
         $wpdb->update( $table, $data, array( 'id' => $id ) );
     }
 
-    // Mirror to WP user
+    // Miroir vers le compte WP natif
     $wp_user = get_user_by( 'email', $wpdb->get_var( $wpdb->prepare( "SELECT email FROM {$table} WHERE id = %d", $id ) ) );
     if ( $wp_user ) {
         $wp_update = array( 'ID' => $wp_user->ID );
         if ( isset( $data['username'] ) )   { $wp_update['display_name'] = $data['username']; update_user_meta( $wp_user->ID, 'nickname', $data['username'] ); }
-        if ( isset( $data['nom'] ) )        { $wp_update['last_name']    = $data['nom'];       update_user_meta( $wp_user->ID, 'last_name', $data['nom'] ); }
-        if ( isset( $data['prenom'] ) )     { $wp_update['first_name']   = $data['prenom'];    update_user_meta( $wp_user->ID, 'first_name', $data['prenom'] ); }
+        if ( isset( $data['last_name'] ) )  { $wp_update['last_name']    = $data['last_name'];  update_user_meta( $wp_user->ID, 'last_name', $data['last_name'] ); }
+        if ( isset( $data['first_name'] ) ) { $wp_update['first_name']   = $data['first_name']; update_user_meta( $wp_user->ID, 'first_name', $data['first_name'] ); }
         if ( isset( $data['is_admin'] ) )   { update_user_meta( $wp_user->ID, 'is_admin', $data['is_admin'] ); }
         if ( isset( $data['newsletter'] ) ) { update_user_meta( $wp_user->ID, 'newsletter', $data['newsletter'] ); }
         wp_update_user( $wp_update );
@@ -213,7 +213,7 @@ function olthem_rest_admin_user_update( WP_REST_Request $request ): WP_REST_Resp
     return new WP_REST_Response( array( 'message' => 'Utilisateur mis a jour.' ), 200 );
 }
 
-// ─── User delete ─────────────────────────────────────────────────────────────
+// ─── Suppression d'un utilisateur ───────────────────────────────────────────
 
 function olthem_rest_admin_user_delete( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -237,7 +237,7 @@ function olthem_rest_admin_user_delete( WP_REST_Request $request ): WP_REST_Resp
     return new WP_REST_Response( array( 'message' => 'Utilisateur supprime.' ), 200 );
 }
 
-// ─── Ateliers list ───────────────────────────────────────────────────────────
+// ─── Liste des ateliers ─────────────────────────────────────────────────────
 
 function olthem_rest_admin_ateliers( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -256,7 +256,7 @@ function olthem_rest_admin_ateliers( WP_REST_Request $request ): WP_REST_Respons
     $id_val = sanitize_text_field( (string) ( $request->get_param( 'id' ) ?? '' ) );
     if ( '' !== $id_val ) { $where[] = 'a.id = %d'; $values[] = (int) $id_val; }
 
-    foreach ( array( 'username', 'email', 'telephone' ) as $col ) {
+    foreach ( array( 'username', 'email', 'phone' ) as $col ) {
         $val = sanitize_text_field( (string) ( $request->get_param( $col ) ?? '' ) );
         if ( '' !== $val ) {
             $db_col   = $col === 'username' ? 'u.username' : "a.{$col}";
@@ -265,8 +265,8 @@ function olthem_rest_admin_ateliers( WP_REST_Request $request ): WP_REST_Respons
         }
     }
 
-    $thm_id = $request->get_param( 'thematique_id' );
-    if ( $thm_id !== null && $thm_id !== '' ) { $where[] = 'a.thematique_id = %d'; $values[] = (int) $thm_id; }
+    $thm_id = $request->get_param( 'thematic_id' );
+    if ( $thm_id !== null && $thm_id !== '' ) { $where[] = 'a.thematic_id = %d'; $values[] = (int) $thm_id; }
 
     $mundaneum = $request->get_param( 'mundaneum' );
     if ( $mundaneum !== null && $mundaneum !== '' ) { $where[] = 'a.mundaneum = %d'; $values[] = (int) $mundaneum; }
@@ -290,10 +290,10 @@ function olthem_rest_admin_ateliers( WP_REST_Request $request ): WP_REST_Respons
     ) );
 
     $query = $wpdb->prepare(
-        "SELECT a.*, u.username AS linked_username, p.post_title AS thematique_title
+        "SELECT a.*, u.username, p.post_title AS thematique
          FROM {$table_ateliers} a
          LEFT JOIN {$table_users} u ON u.id = a.user_id
-         LEFT JOIN {$table_posts} p ON p.ID = a.thematique_id
+         LEFT JOIN {$table_posts} p ON p.ID = a.thematic_id
          WHERE {$where_sql}
          ORDER BY a.created_at DESC, a.id DESC
          LIMIT %d OFFSET %d",
@@ -309,7 +309,7 @@ function olthem_rest_admin_ateliers( WP_REST_Request $request ): WP_REST_Respons
     ), 200 );
 }
 
-// ─── Atelier update ──────────────────────────────────────────────────────────
+// ─── Mise à jour d'un atelier ───────────────────────────────────────────────
 
 function olthem_rest_admin_atelier_update( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -322,13 +322,13 @@ function olthem_rest_admin_atelier_update( WP_REST_Request $request ): WP_REST_R
     $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table_ateliers} WHERE id = %d LIMIT 1", $id ) );
     if ( ! $exists ) return new WP_REST_Response( array( 'message' => 'Atelier introuvable.' ), 404 );
 
-    $allowed = array( 'thematique_id', 'mundaneum', 'etablissement', 'adresse', 'localite', 'code_postal',
-                      'nom', 'prenom', 'email', 'telephone', 'nb_participants', 'start_date', 'end_date', 'valid_date' );
+    $allowed = array( 'thematic_id', 'mundaneum', 'institution', 'address', 'city', 'postal_code',
+                      'last_name', 'first_name', 'email', 'phone', 'participants_count', 'start_date', 'end_date', 'valid_date' );
     $data    = array();
     foreach ( $allowed as $col ) {
         if ( ! array_key_exists( $col, $values ) ) continue;
         $val = $values[ $col ];
-        if ( in_array( $col, array( 'thematique_id', 'mundaneum', 'nb_participants' ), true ) ) {
+        if ( in_array( $col, array( 'thematic_id', 'mundaneum', 'participants_count' ), true ) ) {
             $data[ $col ] = $val === '' || $val === null ? null : (int) $val;
         } elseif ( in_array( $col, array( 'start_date', 'end_date', 'valid_date' ), true ) ) {
             $data[ $col ] = ( $val !== '' && preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $val ) ) ? $val : null;
@@ -344,7 +344,7 @@ function olthem_rest_admin_atelier_update( WP_REST_Request $request ): WP_REST_R
     return new WP_REST_Response( array( 'message' => 'Atelier mis a jour.' ), 200 );
 }
 
-// ─── Atelier delete ──────────────────────────────────────────────────────────
+// ─── Suppression d'un atelier ───────────────────────────────────────────────
 
 function olthem_rest_admin_atelier_delete( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -359,7 +359,7 @@ function olthem_rest_admin_atelier_delete( WP_REST_Request $request ): WP_REST_R
     return new WP_REST_Response( array( 'message' => 'Atelier supprime.' ), 200 );
 }
 
-// ─── Forms submit ────────────────────────────────────────────────────────────
+// ─── Soumission des formulaires ─────────────────────────────────────────────
 
 function olthem_rest_forms_submit( WP_REST_Request $request ): WP_REST_Response {
     global $wpdb;
@@ -391,49 +391,49 @@ function olthem_rest_forms_submit( WP_REST_Request $request ): WP_REST_Response 
         $table_users    = $wpdb->prefix . 'olthem_users';
 
         $connected = $user_id ? 1 : 0;
-        $nom    = sanitize_text_field( (string) ( $values['nom']    ?? '' ) );
-        $prenom = sanitize_text_field( (string) ( $values['prenom'] ?? '' ) );
+        $nom    = sanitize_text_field( (string) ( $values['last_name']  ?? '' ) );
+        $prenom = sanitize_text_field( (string) ( $values['first_name'] ?? '' ) );
         $email  = sanitize_email( (string) ( $values['email'] ?? '' ) );
 
         if ( $user_id ) {
             $linked = $wpdb->get_row( $wpdb->prepare(
-                "SELECT nom, prenom, email FROM {$table_users} WHERE id = %d LIMIT 1", $user_id
+                "SELECT last_name, first_name, email FROM {$table_users} WHERE id = %d LIMIT 1", $user_id
             ) );
-            if ( $linked ) { $nom = (string) $linked->nom; $prenom = (string) $linked->prenom; $email = (string) $linked->email; }
+            if ( $linked ) { $nom = (string) $linked->last_name; $prenom = (string) $linked->first_name; $email = (string) $linked->email; }
         }
 
         if ( ! is_email( $email ) ) return new WP_REST_Response( array( 'message' => 'Adresse email invalide.' ), 400 );
 
-        $thematique_id = isset( $values['thematique_id'] ) && $values['thematique_id'] !== '' ? (int) $values['thematique_id'] : null;
+        $thematique_id = isset( $values['thematic_id'] ) && $values['thematic_id'] !== '' ? (int) $values['thematic_id'] : null;
         $start_date    = ( ! empty( $values['start_date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $values['start_date'] ) ) ? $values['start_date'] : null;
         $end_date      = ( ! empty( $values['end_date'] )   && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $values['end_date'] ) )   ? $values['end_date']   : null;
-        $nb            = isset( $values['nb_participants'] ) && $values['nb_participants'] !== '' ? (int) $values['nb_participants'] : null;
+        $nb            = isset( $values['participants_count'] ) && $values['participants_count'] !== '' ? (int) $values['participants_count'] : null;
 
         $data = array(
-            'mundaneum'            => olthem_bool_to_int( $values['mundaneum'] ?? 0 ),
-            'etablissement'        => sanitize_text_field( (string) ( $values['etablissement'] ?? '' ) ),
-            'adresse'              => sanitize_text_field( (string) ( $values['adresse'] ?? '' ) ),
-            'localite'             => sanitize_text_field( (string) ( $values['localite'] ?? '' ) ),
-            'code_postal'          => sanitize_text_field( (string) ( $values['code_postal'] ?? '' ) ),
-            'utilisateur_connecte' => $connected,
-            'nom'                  => $nom,
-            'prenom'               => $prenom,
-            'email'                => $email,
-            'telephone'            => sanitize_text_field( (string) ( $values['telephone'] ?? '' ) ),
-            'nb_participants'      => $nb,
+            'mundaneum'          => olthem_bool_to_int( $values['mundaneum'] ?? 0 ),
+            'institution'        => sanitize_text_field( (string) ( $values['institution'] ?? '' ) ),
+            'address'            => sanitize_text_field( (string) ( $values['address']     ?? '' ) ),
+            'city'               => sanitize_text_field( (string) ( $values['city']        ?? '' ) ),
+            'postal_code'        => sanitize_text_field( (string) ( $values['postal_code'] ?? '' ) ),
+            'is_registered_user' => $connected,
+            'last_name'          => $nom,
+            'first_name'         => $prenom,
+            'email'              => $email,
+            'phone'              => sanitize_text_field( (string) ( $values['phone']        ?? '' ) ),
+            'participants_count' => $nb,
             'start_date'           => $start_date,
             'end_date'             => $end_date,
             'share_contact'        => olthem_bool_to_int( $values['share_contact'] ?? 0 ),
         );
-        if ( $user_id )       $data['user_id']       = $user_id;
-        if ( $thematique_id ) $data['thematique_id'] = $thematique_id;
+        if ( $user_id )       $data['user_id']      = $user_id;
+        if ( $thematique_id ) $data['thematic_id']  = $thematique_id;
 
         // Géocodage automatique via Nominatim
         if ( function_exists( 'olthem_geocode_address' ) ) {
             $coords = olthem_geocode_address(
-                $data['adresse'],
-                $data['localite'],
-                $data['code_postal']
+                $data['address'],
+                $data['city'],
+                $data['postal_code']
             );
             if ( $coords ) {
                 $data['latitude']  = $coords['lat'];
@@ -444,7 +444,50 @@ function olthem_rest_forms_submit( WP_REST_Request $request ): WP_REST_Response 
         $inserted = $wpdb->insert( $table_ateliers, $data );
         if ( ! $inserted ) return new WP_REST_Response( array( 'message' => 'Erreur base de donnees.' ), 500 );
 
-        return new WP_REST_Response( array( 'message' => 'Atelier enregistre.', 'id' => $wpdb->insert_id ), 201 );
+        // ── Email de notification à l'admin ───────────────────────────────────
+        $new_id          = $wpdb->insert_id;
+        $table_tpl       = $wpdb->prefix . 'olthem_email_templates';
+        $tpl             = $wpdb->get_row( $wpdb->prepare(
+            "SELECT subject, body FROM {$table_tpl} WHERE event_key = %s LIMIT 1",
+            'atelier_admin'
+        ) );
+
+        if ( $tpl ) {
+            $thematique_title = '';
+            if ( $thematique_id ) {
+                $thematique_title = (string) get_the_title( $thematique_id );
+            }
+
+            $username = $user ? (string) get_user_meta( $user->ID, 'nickname', true ) : ( $prenom . ' ' . $nom );
+            $lieu     = trim( implode( ', ', array_filter( array(
+                $data['institution'],
+                $data['address'],
+                $data['postal_code'],
+                $data['city'],
+            ) ) ) );
+
+            $mail_body = str_replace(
+                array( '[USERNAME]', '[LIEU]', '[THEMATIQUE]', '[start_date]', '[end_date]', '[participants_count]', '[first_name]', '[last_name]', '[email]', '[phone]' ),
+                array(
+                    $username,
+                    $lieu,
+                    $thematique_title,
+                    $start_date   ?? '—',
+                    $end_date     ?? '—',
+                    $nb           !== null ? (string) $nb : '—',
+                    sanitize_text_field( (string) ( $values['first_name'] ?? $prenom ) ),
+                    sanitize_text_field( (string) ( $values['last_name']  ?? $nom ) ),
+                    sanitize_email(      (string) ( $values['email']      ?? $email ) ),
+                    sanitize_text_field( (string) ( $values['phone']      ?? '' ) ),
+                ),
+                $tpl->body
+            );
+
+            $admin_email = get_option( 'admin_email' );
+            wp_mail( $admin_email, $tpl->subject, $mail_body );
+        }
+
+        return new WP_REST_Response( array( 'message' => 'Atelier enregistre.', 'id' => $new_id ), 201 );
     }
 
     return new WP_REST_Response( array( 'message' => 'Processus inconnu.' ), 400 );
@@ -463,19 +506,19 @@ function olthem_rest_upcoming_ateliers( WP_REST_Request $request ): WP_REST_Resp
         "SELECT
             a.id,
             a.mundaneum,
-            a.etablissement,
-            a.localite,
-            a.code_postal,
-            a.adresse,
+            a.institution,
+            a.city,
+            a.postal_code,
+            a.address,
             a.valid_date,
             a.share_contact,
             a.email        AS contact_email,
             a.latitude,
             a.longitude,
-            a.thematique_id,
+            a.thematic_id,
             p.post_title   AS thematique_titre
          FROM {$table_ateliers} a
-         LEFT JOIN {$table_posts} p ON p.ID = a.thematique_id
+         LEFT JOIN {$table_posts} p ON p.ID = a.thematic_id
          WHERE a.valid_date IS NOT NULL
            AND a.valid_date >= %s
          ORDER BY a.valid_date ASC, a.id ASC",
@@ -488,17 +531,17 @@ function olthem_rest_upcoming_ateliers( WP_REST_Request $request ): WP_REST_Resp
         return array(
             'id'               => (int) $row['id'],
             'mundaneum'        => (bool) $row['mundaneum'],
-            'etablissement'    => (string) $row['etablissement'],
-            'localite'         => (string) $row['localite'],
-            'code_postal'      => (string) $row['code_postal'],
-            'adresse'          => (string) $row['adresse'],
+            'institution'      => (string) $row['institution'],
+            'city'             => (string) $row['city'],
+            'postal_code'      => (string) $row['postal_code'],
+            'address'          => (string) $row['address'],
             'valid_date'       => (string) $row['valid_date'],
             'share_contact'    => (bool) $row['share_contact'],
             // N'exposer l'email que si share_contact est activé
             'contact_email'    => ( (int) $row['share_contact'] === 1 ) ? (string) $row['contact_email'] : null,
             'latitude'         => isset( $row['latitude'] )  && $row['latitude']  !== null ? (float) $row['latitude']  : null,
             'longitude'        => isset( $row['longitude'] ) && $row['longitude'] !== null ? (float) $row['longitude'] : null,
-            'thematique_id'    => $row['thematique_id'] ? (int) $row['thematique_id'] : null,
+            'thematic_id'      => $row['thematic_id'] ? (int) $row['thematic_id'] : null,
             'thematique_titre' => (string) $row['thematique_titre'],
         );
     }, $rows );
@@ -517,14 +560,14 @@ add_action( 'rest_api_init', function () {
         'permission_callback' => '__return_true',
     ) );
 
-    // Overview
+    // Tableau de bord
     register_rest_route( 'olthem/v1', '/admin/overview', array(
         'methods'             => WP_REST_Server::READABLE,
         'callback'            => 'olthem_rest_admin_overview',
         'permission_callback' => 'olthem_admin_permission_callback',
     ) );
 
-    // Users
+    // Utilisateurs
     register_rest_route( 'olthem/v1', '/admin/users', array(
         'methods'             => WP_REST_Server::READABLE,
         'callback'            => 'olthem_rest_admin_users',
@@ -558,7 +601,7 @@ add_action( 'rest_api_init', function () {
         'permission_callback' => 'olthem_admin_permission_callback',
     ) );
 
-    // Forms
+    // Formulaires
     register_rest_route( 'olthem/v1', '/forms/submit', array(
         'methods'             => WP_REST_Server::CREATABLE,
         'callback'            => 'olthem_rest_forms_submit',

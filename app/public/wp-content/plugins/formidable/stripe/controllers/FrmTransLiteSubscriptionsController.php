@@ -95,6 +95,7 @@ class FrmTransLiteSubscriptionsController extends FrmTransLiteCRUDController {
 	 */
 	public static function cancel_subscription() {
 		check_ajax_referer( 'frm_trans_ajax', 'nonce' );
+		FrmAppHelper::permission_check( 'frm_edit_entries' );
 
 		$sub_id = FrmAppHelper::get_param( 'sub', '', 'get', 'sanitize_text_field' );
 
@@ -154,27 +155,12 @@ class FrmTransLiteSubscriptionsController extends FrmTransLiteCRUDController {
 	}
 
 	/**
+	 * @deprecated 6.27
+	 *
 	 * @return string|null
 	 */
 	public static function list_subscriptions_shortcode() {
-		if ( ! is_user_logged_in() ) {
-			return;
-		}
-
-		$frm_sub       = new FrmTransLiteSubscription();
-		$subscriptions = $frm_sub->get_all_for_user( get_current_user_id() );
-
-		if ( empty( $subscriptions ) ) {
-			return;
-		}
-
-		FrmTransLiteActionsController::actions_js();
-
-		ob_start();
-		include FrmTransLiteAppHelper::plugin_path() . '/views/subscriptions/list_shortcode.php';
-		$content = ob_get_contents();
-		ob_end_clean();
-
-		return $content;
+		_deprecated_function( __METHOD__, '6.27' );
+		return null;
 	}
 }
